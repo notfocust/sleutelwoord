@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleutelwoord - Veilige Wachtwoord Generator voor Chrome</title>
+    <style>
+        :root {
+            --primary-color: #FF9800; /* Oranje kleur zoals in de extensie */
+            --background-color: #1E1E1E; /* Donkere achtergrond */
+            --text-color: #FFFFFF;
+            --secondary-bg: #2D2D2D;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            color: var(--text-color);
+            background-color: var(--background-color);
+            line-height: 1.5;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .promo-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 0 5%;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            fill: var(--primary-color);
+        }
+        
+        .logo-text {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        h1 {
+            font-size: 42px;
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+        
+        .tagline {
+            font-size: 20px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .features {
+            margin-bottom: 40px;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--primary-color);
+            margin-right: 15px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 18px;
+            transition: background-color 0.3s ease;
+        }
+        
+        .cta-button:hover {
+            background-color: #E68A00;
+        }
+        
+        .extension-preview {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .browser-mockup {
+            background-color: #2D2D2D;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            width: 360px;
+            overflow: hidden;
+        }
+        
+        .browser-header {
+            background-color: #3D3D3D;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .browser-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .dot-red {
+            background-color: #FF5F57;
+        }
+        
+        .dot-yellow {
+            background-color: #FFBD2E;
+        }
+        
+        .dot-green {
+            background-color: #28CA41;
+        }
+        
+        .browser-address {
+            background-color: #1A1A1A;
+            border-radius: 4px;
+            height: 24px;
+            flex: 1;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .extension-content {
+            padding: 15px;
+        }
+        
+        .extension-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .extension-title {
+            font-size: 16px;
+            margin-left: 10px;
+        }
+        
+        .toggle-switch {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .toggle-label {
+            margin: 0 5px;
+            opacity: 0.7;
+        }
+        
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 18px;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #444;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        .toggle-active .toggle-slider {
+            background-color: var(--primary-color);
+        }
+        
+        .toggle-active .toggle-slider:before {
+            transform: translateX(18px);
+        }
+        
+        .password-display {
+            background-color: #3D3D3D;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .generate-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .options-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-top: 1px solid #444;
+            margin-bottom: 10px;
+        }
+        
+        .options-title {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        
+        .options-toggle {
+            margin-left: auto;
+        }
+        
+        .password-item {
+            background-color: #3D3D3D;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .extension-footer {
+            text-align: right;
+            font-size: 10px;
+            opacity: 0.5;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 992px) {
+            .container {
+                flex-direction: column;
+                overflow-y: auto;
+                height: auto;
+            }
+            
+            html, body {
+                overflow-y: auto;
+            }
+            
+            .promo-content, .extension-preview {
+                padding: 40px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="promo-content">
+            <div class="logo">
+                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+                <span class="logo-text">Sleutelwoord</span>
+            </div>
+            
+            <h1>Genereer veilige wachtwoorden met één klik</h1>
+            
+            <p class="tagline">De eenvoudige Chrome-extensie die sterke, unieke wachtwoorden genereert voor al je online accounts.</p>
+            
+            <div class="features">
+                <div class="feature">
+                    <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                    </svg>
+                    <span>Genereer sterke wachtwoorden met één klik</span>
+                </div>
+                <div class="feature">
+                    <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                    </svg>
+                    <span>Kies tussen wachtwoordzinnen of willekeurige tekens</span>
+                </div>
+                <div class="feature">
+                    <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                    </svg>
+                    <span>Werkt volledig lokaal, zonder gegevens naar externe servers te sturen</span>
+                </div>
+                <div class="feature">
+                    <svg class="feature-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
+                    </svg>
+                    <span>Gratis en eenvoudig te gebruiken</span>
+                </div>
+            </div>
+            
+            <a href="#" class="cta-button">Toevoegen aan Chrome</a>
+        </div>
+        
+        <div class="extension-preview">
+            <div class="browser-mockup">
+                <div class="browser-header">
+                    <div class="browser-dot dot-red"></div>
+                    <div class="browser-dot dot-yellow"></div>
+                    <div class="browser-dot dot-green"></div>
+                    <div class="browser-address">chrome://extensions</div>
+                </div>
+                <div class="extension-content">
+                    <div class="extension-header">
+                        <svg class="logo-icon" style="width: 24px; height: 24px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2z"/>
+                        </svg>
+                        <span class="extension-title">Wachtwoord Generator</span>
+                        <div class="toggle-switch">
+                            <span class="toggle-label">Woorden</span>
+                            <div class="toggle toggle-active">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span class="toggle-label">Random</span>
+                        </div>
+                    </div>
+                    
+                    <div class="password-display">Lan+gJarig29</div>
+                    
+                    <button class="generate-button">Genereer Wachtwoord</button>
+                    
+                    <div class="options-header">
+                        <span class="options-title">Opties</span>
+                        <div class="options-toggle">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="password-list">
+                        <div class="password-item">Galop@Bijwa*</div>
+                        <div class="password-item">vaagw@eg48!!</div>
+                        <div class="password-item">pJos[twagen9</div>
+                    </div>
+                    
+                    <div class="extension-footer">
+                        Tools by BigBrain
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
