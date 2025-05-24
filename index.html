@@ -3,42 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="dark">
-    <title>Email Security Checker - SPF, DKIM & DMARC</title>
+    <title>Email Security Checker</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Floating background elements -->
+    <div class="floating-elements">
+        <div class="floating-selector" data-selector="selector1">selector1._domainkey</div>
+        <div class="floating-selector" data-selector="google">google._domainkey</div>
+        <div class="floating-selector" data-selector="dkim">dkim._domainkey</div>
+        <div class="floating-selector" data-selector="k1">k1._domainkey</div>
+        <div class="floating-selector" data-selector="transip">transip._domainkey</div>
+        <div class="floating-selector" data-selector="hostnet">hostnet._domainkey</div>
+        <div class="floating-selector" data-selector="sig1">sig1._domainkey</div>
+        <div class="floating-selector" data-selector="mandrill">mandrill._domainkey</div>
+    </div>
+
+    <!-- Custom cursor -->
+    <div class="custom-cursor"></div>
+    <div class="cursor-follower"></div>
+
     <div class="container">
         <div class="header">
             <h1>Email Security Checker</h1>
-            <p>Controleer SPF, DKIM en DMARC records voor elk domein</p>
+            <p>Controleer de SPF, DMARC en DKIM records van je domein</p>
         </div>
-
-        <div class="input-section">
-            <div class="input-group">
-                <input type="text" id="domain" placeholder="Voer domein in, bijv. hannovanderdussen.nl" autocomplete="off">
-                <button id="checkButton" class="btn btn-primary">Controleer</button>
-            </div>
-        </div>
-
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <div class="progress-container">
-                <div class="progress-bar" id="progressFill"></div>
-            </div>
-            <div class="progress-text" id="progressText">Controleren...</div>
-            
-            <div class="currently-testing">
-                <h4>Momenteel aan het testen:</h4>
-                <div id="currentlyTesting" class="testing-display">
-                    <div class="testing-item">Wachten op volgende batch...</div>
+        
+        <div class="main-content">
+            <!-- Linker kolom: Voordelen -->
+            <div class="benefits-section">
+                <h2>Waarom onze Email Security Checker?</h2>
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🇳🇱</div>
+                        <h3>Nederlandse Focus</h3>
+                        <p>Gespecialiseerd in Nederlandse providers</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🔍</div>
+                        <h3>200+ DKIM Checks</h3>
+                        <p>Uitgebreide controle van DKIM selectors</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">⚡</div>
+                        <h3>Binnen 1 Minuut</h3>
+                        <p>Snelle resultaten dankzij geavanceerde DNS queries</p>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Rechter kolom: Input en resultaten -->
+            <div class="checker-section">
+                <div class="input-section">
+                    <div class="input-group">
+                        <input type="text" id="domain" placeholder="Voer je domein in (bijvoorbeeld: hannovanderdussen.nl)">
+                        <button id="checkButton" class="btn btn-primary">Controleer</button>
+                    </div>
+                </div>
+                
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Voorbereiden...</div>
+                </div>
+                
+                <div id="results" class="results"></div>
+            </div>
         </div>
-
-        <div id="results" class="results"></div>
     </div>
-
+    
     <script src="script.js"></script>
 </body>
 </html>
