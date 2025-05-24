@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Email Security Checker - SPF, DKIM & DMARC</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Email Security Checker</h1>
+            <p>Controleer SPF, DKIM en DMARC records voor elk domein</p>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="domain" placeholder="Voer domein in, bijv. hannovanderdussen.nl" autocomplete="off">
+                <button id="checkButton" class="btn btn-primary">Controleer</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Controleren...</div>
+            
+            <div class="currently-testing">
+                <h4>Momenteel aan het testen:</h4>
+                <div id="currentlyTesting" class="testing-display">
+                    <div class="testing-item">Wachten op volgende batch...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
