@@ -80,12 +80,21 @@ class EmailSecurityChecker {
             'https://1.1.1.1/dns-query'
         ];
 
+        // Track highest progress value to avoid regressions on async updates
+        this.maxProgress = 0;
+
         this.init();
     }
 
     init() {
         const checkButton = document.getElementById('checkButton');
         const domainInput = document.getElementById('domain');
+        const themeToggle = document.getElementById('themeToggle');
+        this.modal = document.getElementById('resultsModal');
+        this.modalClose = document.getElementById('modalClose');
+        this.modalResults = document.getElementById('modalResults');
+        this.modalDomain = document.getElementById('modalDomain');
+        this.modalCheck = document.getElementById('modalCheck');
 
         checkButton.addEventListener('click', () => this.checkEmailSecurity());
         domainInput.addEventListener('keypress', (e) => {
@@ -94,69 +103,77 @@ class EmailSecurityChecker {
             }
         });
 
+        if (this.modalCheck) {
+            this.modalCheck.addEventListener('click', () => {
+                if (this.modalDomain && this.modalDomain.value) {
+                    document.getElementById('domain').value = this.modalDomain.value;
+                }
+                this.checkEmailSecurity();
+            });
+        }
+        if (this.modalDomain) {
+            this.modalDomain.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    if (this.modalDomain && this.modalDomain.value) {
+                        document.getElementById('domain').value = this.modalDomain.value;
+                    }
+                    this.checkEmailSecurity();
+                }
+            });
+        }
+
         domainInput.focus();
         
-        // Maak de instance globaal beschikbaar voor onclick handlers
+        // Make instance globally available for inline onclick handlers
         window.emailChecker = this;
         
-        // Initialize custom cursor
-        this.initCustomCursor();
-    }
+        // Initialize theme from persisted preference
+        this.initTheme(themeToggle);
 
-    initCustomCursor() {
-        const cursor = document.querySelector('.custom-cursor');
-        const follower = document.querySelector('.cursor-follower');
-        
-        let mouseX = 0;
-        let mouseY = 0;
-        let followerX = 0;
-        let followerY = 0;
-
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            
-            cursor.style.left = mouseX + 'px';
-            cursor.style.top = mouseY + 'px';
-        });
-
-        // Smooth follower animation
-        const animateFollower = () => {
-            followerX += (mouseX - followerX) * 0.1;
-            followerY += (mouseY - followerY) * 0.1;
-            
-            follower.style.left = followerX + 'px';
-            follower.style.top = followerY + 'px';
-            
-            requestAnimationFrame(animateFollower);
-        };
-        animateFollower();
-
-        // Hover effects
-        const hoverElements = document.querySelectorAll('button, input, .benefit-item, .selector-header');
-        
-        hoverElements.forEach(el => {
-            el.addEventListener('mouseenter', () => {
-                cursor.style.transform = 'scale(1.5)';
-                follower.style.transform = 'scale(1.5)';
+        // Modal close handlers
+        if (this.modalClose) {
+            this.modalClose.addEventListener('click', () => this.closeModal());
+        }
+        if (this.modal) {
+            this.modal.addEventListener('click', (e) => {
+                if (e.target === this.modal) this.closeModal();
             });
-            
-            el.addEventListener('mouseleave', () => {
-                cursor.style.transform = 'scale(1)';
-                follower.style.transform = 'scale(1)';
-            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.closeModal();
         });
     }
+
+    nextFrame() {
+        return new Promise(resolve => requestAnimationFrame(() => resolve()));
+    }
+
+    initTheme(themeToggle) {
+        const saved = localStorage.getItem('theme');
+        const isDark = saved === 'dark';
+        document.body.classList.toggle('dark', isDark);
+        if (themeToggle) themeToggle.textContent = isDark ? '☀️' : '🌙';
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const nowDark = !document.body.classList.contains('dark');
+                document.body.classList.toggle('dark', nowDark);
+                localStorage.setItem('theme', nowDark ? 'dark' : 'light');
+                themeToggle.textContent = nowDark ? '☀️' : '🌙';
+            });
+        }
+    }
+
+    
 
     async checkEmailSecurity() {
         const domain = document.getElementById('domain').value.trim();
         if (!domain) {
-            this.showError('Voer een geldig domein in');
+            this.showError('Enter a valid domain');
             return;
         }
 
         if (!this.isValidDomain(domain)) {
-            this.showError('Voer een geldig domein in (bijvoorbeeld: hannovanderdussen.nl)');
+            this.showError('Enter a valid domain (e.g., hannovanderdussen.nl)');
             return;
         }
 
@@ -164,38 +181,38 @@ class EmailSecurityChecker {
         this.resetProgress();
 
         try {
-            // Toon direct een lege resultatencontainer
+            // Show empty results container immediately in modal
             this.initializeResultsContainer(domain);
+            await this.nextFrame();
             
-            // Check SPF en DMARC parallel en toon direct
-            this.updateProgress(5, 'Controleren SPF en DMARC records...');
+            // Check SPF and DMARC in parallel and render immediately
+            this.updateProgress(5, 'Checking SPF and DMARC records...');
             
             const [spfResult, dmarcResult] = await Promise.all([
                 this.checkSPFRecord(domain),
                 this.checkDMARCRecord(domain)
             ]);
             
-            // Toon SPF en DMARC resultaten direct
+            // Render SPF and DMARC results immediately
             this.displayInitialResults(domain, spfResult, dmarcResult);
             
-            this.updateProgress(20, 'Controleren DKIM selectors...');
+            this.updateProgress(20, 'Checking DKIM selectors...');
             
-            // Start DKIM checks en update progressief
+            // Start DKIM checks and update progressively
             await this.checkAllDKIMSelectorsProgressive(domain);
             
         } catch (error) {
             this.hideLoading();
-            this.showError('Er is een fout opgetreden tijdens het controleren van email security records: ' + error.message);
+            this.showError('An error occurred while checking email security records: ' + error.message);
         }
     }
 
     initializeResultsContainer(domain) {
-        const resultsContainer = document.getElementById('results');
-        resultsContainer.innerHTML = `
+        if (this.modalResults) this.modalResults.innerHTML = `
             <div class="summary">
-                <h2>Email Security Check voor ${domain}</h2>
+                <h2>Email Security Check for ${domain}</h2>
                 <div id="spf-dmarc-container">
-                    <p>Laden van SPF en DMARC records...</p>
+                    <p>Loading SPF and DMARC records...</p>
                 </div>
             </div>
             <div id="dkim-container">
@@ -203,11 +220,20 @@ class EmailSecurityChecker {
                     <h3>DKIM Records</h3>
                 </div>
                 <div class="section-description">
-                    DKIM records worden geladen...
+                    Loading DKIM records...
+                </div>
+                <div class="loading" style="display:block; margin: 8px 0 16px 0;">
+                    <div class="spinner"></div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Preparing...</div>
+                    <div class="quote-text" id="quoteText"></div>
                 </div>
                 <div id="dkim-results"></div>
             </div>
         `;
+        // Modal is opened in showLoading
     }
 
     displayInitialResults(domain, spfResult, dmarcResult) {
@@ -218,13 +244,13 @@ class EmailSecurityChecker {
                 <div class="security-item">
                     <h3>SPF Record</h3>
                     <div class="security-status ${spfResult.found ? 'status-found' : 'status-not-found'}">
-                        ${spfResult.found ? 'Gevonden' : 'Niet gevonden'}
+                        ${spfResult.found ? 'Found' : 'Not found'}
                     </div>
                     ${spfResult.found ? `
                         <div class="record-details">
                             <div class="record-line">
                                 <span class="record-text">${spfResult.record}</span>
-                                <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${spfResult.record.replace(/'/g, "\\'")}')">Kopieer</button>
+                                <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${spfResult.record.replace(/'/g, "\\'")}')">Copy</button>
                             </div>
                         </div>
                     ` : ''}
@@ -232,13 +258,13 @@ class EmailSecurityChecker {
                 <div class="security-item">
                     <h3>DMARC Record</h3>
                     <div class="security-status ${dmarcResult.found ? 'status-found' : 'status-not-found'}">
-                        ${dmarcResult.found ? 'Gevonden' : 'Niet gevonden'}
+                        ${dmarcResult.found ? 'Found' : 'Not found'}
                     </div>
                     ${dmarcResult.found ? `
                         <div class="record-details">
                             <div class="record-line">
                                 <span class="record-text">${dmarcResult.record}</span>
-                                <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${dmarcResult.record.replace(/'/g, "\\'")}')">Kopieer</button>
+                                <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${dmarcResult.record.replace(/'/g, "\\'")}')">Copy</button>
                             </div>
                         </div>
                     ` : ''}
@@ -251,36 +277,36 @@ class EmailSecurityChecker {
         const dkimResults = [];
         const dkimResultsContainer = document.getElementById('dkim-results');
         
-        // Update sectie beschrijving
+        // Update section description
         const sectionDescription = document.querySelector('#dkim-container .section-description');
-        sectionDescription.textContent = 'Bezig met controleren van DKIM selectors...';
+        sectionDescription.textContent = 'Checking DKIM selectors...';
         
         for (let i = 0; i < this.commonSelectors.length; i++) {
             const selector = this.commonSelectors[i];
             
             // Update progress
             const progressPercentage = 20 + ((i / this.commonSelectors.length) * 75);
-            this.updateProgress(progressPercentage, `Controleren DKIM selector: ${selector}`);
+            this.updateProgress(progressPercentage, `Checking DKIM selector: ${selector}`);
             
             try {
                 const result = await this.checkDKIMRecord(domain, selector);
                 if (result.found) {
                     dkimResults.push(result);
                     
-                    // Voeg direct toe aan de resultaten
+                    // Add to results immediately
                     this.addDKIMResultToDOM(result, selector === 'selector1' || selector === 'selector2');
                 }
             } catch (error) {
-                console.warn(`Fout bij controleren van selector ${selector}:`, error);
+                console.warn(`Error checking selector ${selector}:`, error);
             }
             
-            // Kleine vertraging om UI responsive te houden
+            // Small delay to keep UI responsive
             await new Promise(resolve => setTimeout(resolve, 10));
         }
         
-        // Update sectie beschrijving
-        sectionDescription.textContent = `${dkimResults.length} DKIM record(s) gevonden`;
-        this.updateProgress(100, 'Controle voltooid');
+        // Update section description
+        sectionDescription.textContent = `${dkimResults.length} DKIM record(s) found`;
+        this.updateProgress(100, 'Check completed');
         this.hideLoading();
         
         return dkimResults;
@@ -298,18 +324,18 @@ class EmailSecurityChecker {
                     ${result.selector}
                     ${isMicrosoft ? '<span class="microsoft-badge">Microsoft</span>' : ''}
                 </div>
-                <div class="status found">Gevonden</div>
+                <div class="status found">Found</div>
             </div>
             <div class="selector-details">
                 <strong>Selector:</strong>
                 <div class="record-line">
                     <span class="record-text">${result.selector}</span>
-                    <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${result.selector}')">Kopieer</button>
+                    <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${result.selector}')">Copy</button>
                 </div>
                 <strong>DKIM Record:</strong>
                 <div class="record-line">
                     <span class="record-text">${result.record}</span>
-                    <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${result.record.replace(/'/g, "\\'")}')">Kopieer</button>
+                    <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${result.record.replace(/'/g, "\\'")}')">Copy</button>
                 </div>
             </div>
         `;
@@ -323,28 +349,97 @@ class EmailSecurityChecker {
     }
 
     showError(message) {
+        if (this.modalResults) {
+            this.modalResults.innerHTML = `<div class="error-message">${message}</div>`;
+            this.openModal('Error');
+            return;
+        }
         const resultsContainer = document.getElementById('results');
-        resultsContainer.innerHTML = `<div class="error-message">${message}</div>`;
+        if (resultsContainer) resultsContainer.innerHTML = `<div class="error-message">${message}</div>`;
     }
 
     showLoading() {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('results').innerHTML = '';
+        if (this.modalResults) {
+            this.modalResults.innerHTML = `
+                <div class="loading" style="display:block">
+                    <div class="spinner"></div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Preparing...</div>
+                    <div class="quote-text" id="quoteText"></div>
+                </div>
+            `;
+        }
+        // keep modal controls in header in sync
+        if (this.modalDomain) this.modalDomain.value = document.getElementById('domain').value || '';
+        this.openModal('Checking...');
+        this.startQuotes();
     }
 
     hideLoading() {
-        document.getElementById('loading').style.display = 'none';
+        this.stopQuotes();
+        const scope = this.modalResults || document;
+        const loader = scope.querySelector('.loading');
+        if (loader) loader.style.display = 'none';
     }
 
     resetProgress() {
-        this.updateProgress(0, 'Voorbereiden...');
+        this.maxProgress = 0;
+        this.updateProgress(0, 'Preparing...');
     }
 
     updateProgress(percentage, text) {
-        const progressFill = document.getElementById('progressFill');
-        const progressText = document.getElementById('progressText');
-        if (progressFill) progressFill.style.width = percentage + '%';
-        if (progressText) progressText.textContent = text;
+        const scope = this.modalResults || document;
+        const progressFill = scope.querySelector('#progressFill');
+        const progressText = scope.querySelector('#progressText');
+        const clamped = Math.max(0, Math.min(100, Math.round(percentage)));
+        const next = Math.max(this.maxProgress, clamped);
+        this.maxProgress = next;
+        if (progressFill) progressFill.style.width = next + '%';
+        if (progressText && typeof text === 'string') progressText.textContent = text;
+    }
+
+    openModal(title) {
+        const titleEl = document.getElementById('modalTitle');
+        if (titleEl) titleEl.textContent = title || 'Results';
+        if (this.modal) this.modal.classList.add('open');
+        if (this.modal) this.modal.setAttribute('aria-hidden', 'false');
+    }
+
+    closeModal() {
+        if (this.modal) this.modal.classList.remove('open');
+        if (this.modal) this.modal.setAttribute('aria-hidden', 'true');
+    }
+
+    startQuotes() {
+        const scope = this.modalResults || document;
+        const el = scope.querySelector('#quoteText');
+        if (!el) return;
+        const quotes = [
+            "Woah, that's fast, right?",
+            "Warming up the DNS engines...",
+            "Asking the internet politely...",
+            "Compiling selector magic...",
+            "Hold tight, packets in transit...",
+            "Blink and you'll miss it!",
+            "Summoning DKIM spirits...",
+            "Fetching SPF goodness...",
+            "DMARCing our territory..."
+        ];
+        let i = 0;
+        el.textContent = quotes[i % quotes.length];
+        this.quoteTimer = setInterval(() => {
+            i += 1;
+            el.textContent = quotes[i % quotes.length];
+        }, 1800);
+    }
+
+    stopQuotes() {
+        if (this.quoteTimer) {
+            clearInterval(this.quoteTimer);
+            this.quoteTimer = null;
+        }
     }
 
     async checkSPFRecord(domain) {
@@ -437,10 +532,10 @@ class EmailSecurityChecker {
 
     copyToClipboard(text) {
         navigator.clipboard.writeText(text).then(() => {
-            // Visual feedback voor kopiëren
+            // Visual feedback for copy
             const button = event.target;
             const originalText = button.textContent;
-            button.textContent = 'Gekopieerd!';
+            button.textContent = 'Copied!';
             button.classList.add('copied');
             
             setTimeout(() => {
@@ -448,7 +543,7 @@ class EmailSecurityChecker {
                 button.classList.remove('copied');
             }, 2000);
         }).catch(err => {
-            console.error('Kopiëren mislukt:', err);
+            console.error('Copy failed:', err);
         });
     }
 }

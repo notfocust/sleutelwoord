@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,57 +7,47 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Floating background elements -->
-    <div class="floating-elements">
-        <div class="floating-selector" data-selector="selector1">selector1._domainkey</div>
-        <div class="floating-selector" data-selector="google">google._domainkey</div>
-        <div class="floating-selector" data-selector="dkim">dkim._domainkey</div>
-        <div class="floating-selector" data-selector="k1">k1._domainkey</div>
-        <div class="floating-selector" data-selector="transip">transip._domainkey</div>
-        <div class="floating-selector" data-selector="hostnet">hostnet._domainkey</div>
-        <div class="floating-selector" data-selector="sig1">sig1._domainkey</div>
-        <div class="floating-selector" data-selector="mandrill">mandrill._domainkey</div>
-    </div>
+    <!-- Floating background elements (hidden for clean look) -->
+    <div class="floating-elements"></div>
 
-    <!-- Custom cursor -->
-    <div class="custom-cursor"></div>
-    <div class="cursor-follower"></div>
+    
 
     <div class="container">
         <div class="header">
             <h1>Email Security Checker</h1>
-            <p>Controleer de SPF, DMARC en DKIM records van je domein</p>
+            <p>Check the SPF, DMARC and DKIM records of your domain</p>
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
         </div>
         
         <div class="main-content">
-            <!-- Linker kolom: Voordelen -->
+            <!-- Left column: Benefits -->
             <div class="benefits-section">
-                <h2>Waarom onze Email Security Checker?</h2>
+                <h2>Why use our Email Security Checker?</h2>
                 <div class="benefits-grid">
                     <div class="benefit-item">
                         <div class="benefit-icon">🇳🇱</div>
-                        <h3>Nederlandse Focus</h3>
-                        <p>Gespecialiseerd in Nederlandse providers</p>
+                        <h3>Dutch Focus</h3>
+                        <p>Specialized in Dutch providers</p>
                     </div>
                     <div class="benefit-item">
                         <div class="benefit-icon">🔍</div>
                         <h3>200+ DKIM Checks</h3>
-                        <p>Uitgebreide controle van DKIM selectors</p>
+                        <p>Comprehensive scan of DKIM selectors</p>
                     </div>
                     <div class="benefit-item">
                         <div class="benefit-icon">⚡</div>
-                        <h3>Binnen 1 Minuut</h3>
-                        <p>Snelle resultaten dankzij geavanceerde DNS queries</p>
+                        <h3>Under 1 Minute</h3>
+                        <p>Fast results thanks to advanced DNS queries</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Rechter kolom: Input en resultaten -->
+            <!-- Right column: Input and results -->
             <div class="checker-section">
                 <div class="input-section">
                     <div class="input-group">
-                        <input type="text" id="domain" placeholder="Voer je domein in (bijvoorbeeld: hannovanderdussen.nl)">
-                        <button id="checkButton" class="btn btn-primary">Controleer</button>
+                        <input type="text" id="domain" placeholder="Enter your domain (e.g., hannovanderdussen.nl)">
+                        <button id="checkButton" class="btn btn-primary">Check</button>
                     </div>
                 </div>
                 
@@ -66,10 +56,28 @@
                     <div class="progress-container">
                         <div class="progress-bar" id="progressFill"></div>
                     </div>
-                    <div class="progress-text" id="progressText">Voorbereiden...</div>
+                    <div class="progress-text" id="progressText">Preparing...</div>
+                    <div class="quote-text" id="quoteText"></div>
                 </div>
                 
                 <div id="results" class="results"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Modal -->
+    <div id="resultsModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+            <div class="modal-header">
+                <h2 id="modalTitle">Results</h2>
+                <div class="modal-controls">
+                    <input type="text" id="modalDomain" placeholder="Enter a domain" />
+                    <button id="modalCheck" class="btn btn-primary">Check</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="modalResults"></div>
             </div>
         </div>
     </div>
