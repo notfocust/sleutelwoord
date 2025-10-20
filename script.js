@@ -1,554 +1,324 @@
-class EmailSecurityChecker {
-    constructor() {
-        this.commonSelectors = [
-            // Microsoft 365 standaard selectors (hoogste prioriteit)
-            'selector1', 'selector2',
-            // Apple/iCloud selectors
-            'sig1', 'sig2',
-            // Google Workspace selectors
-            'google', 'google1', 'google2',
-            // Nederlandse providers
-            'zivver', 'transip', 'transip1', 'transip2', 'hostnet', 'hostnet1', 'hostnet2',
-            'antagonist', 'versio', 'versio1', 'versio2', 'mijndomein', 'directadmin',
-            'da1', 'da2', 'cpanel', 'cp1', 'cp2', 'plesk', 'plesk1', 'plesk2',
-            'vimexx', 'byte', 'yourhosting', 'siteground', 'greenhost', 'true',
-            'neostrada', 'argeweb', 'hosting2go', 'combell', 'one', 'serverius',
-            'leaseweb', 'nforcenetworks', 'nforce', 'hypernode',
-            // Nederlandse overheid en instellingen
-            'rijksoverheid', 'overheid', 'gemeente', 'provincie', 'ministerie',
-            // Nederlandse bedrijven en organisaties
-            'kpn', 'ziggo', 'odido', 'tmobile', 'vodafone', 'xs4all', 'planet',
-            'quicknet', 'freedom', 'delta', 'caiway', 'online',
-            // Nederlandse banken
-            'ing', 'rabobank', 'abn', 'abnamro', 'sns', 'asn', 'regiobank',
-            'knab', 'bunq', 'revolut', 'n26', 'triodos',
-            // Nederlandse hosting specifiek
-            'site', 'sitenl', 'hosting', 'hosting1', 'hosting2', 'webhosting',
-            'shared', 'shared1', 'shared2', 'vps', 'vps1', 'vps2',
-            'dedicated', 'cloud', 'cloud1', 'cloud2', 'server', 'server1', 'server2',
-            'mail', 'mail1', 'mail2', 'mx', 'mx1', 'mx2', 'smtp', 'smtp1', 'smtp2',
-            'pop', 'pop3', 'imap', 'imap1', 'imap2',
-            // Everlytic (Nederlandse email marketing)
-            'everlytickey1', 'everlytickey2', 'eversrv',
-            // Global Micro (Nederlandse provider)
-            'mxvault',
-            // Algemene Nederlandse patronen
-            'nl', 'nederland', 'dutch', 'default', 'standaard', 'email', 'e-mail',
-            'post', 'postmaster', 'admin', 'beheer', 'beheerder', 'info', 'contact',
-            'noreply', 'no-reply', 'nieuwsbrief', 'newsletter', 'marketing', 'promo',
-            'service', 'support', 'factuur', 'facturen', 'invoice', 'order',
-            'bestelling', 'klant', 'klanten', 'customer', 'webshop', 'shop', 'winkel',
-            // MailChimp/Mandrill selectors
-            'k1', 'k2', 'mandrill',
-            // SendGrid selectors
-            'sendgrid', 's1', 's2',
-            // Amazon SES selectors
-            'amazonses', 'ses', 'aws',
-            // Postmark selectors
-            'postmark', 'pm',
-            // SparkPost selectors
-            'sparkpost', 'sp',
-            // Hetzner selectors
-            'dkim',
-            // Algemene selectors
-            'key1', 'key2',
-            // Provider-specifieke selectors
-            'mailgun', 'constantcontact', 'campaignmonitor', 'aweber', 'getresponse',
-            'mailerlite', 'sendinblue', 'convertkit', 'drip', 'activecampaign',
-            // Outlook/Office365 selectors
-            'outlook', 'office365', 'exchange', 'hosted',
-            // Numerieke selectors
-            'dkim1', 'dkim2', 'sel1', 'sel2', 'dk1', 'dk2',
-            // Andere patronen
-            'primary', 'secondary', 'main', 'backup', 'prod', 'production',
-            // Email marketing platforms
-            'klaviyo', 'hubspot', 'salesforce', 'pardot',
-            // Security providers
-            'proofpoint', 'mimecast', 'barracuda',
-            // Additional common selectors
-            'dkimChecking', 'test', 'beta', 'staging',
-            // Year-based selectors (vaak gebruikt voor rotatie)
-            '2023', '2024', '2025',
-            // Month-based selectors
-            'jan', 'feb', 'mar', 'apr', 'may', 'jun',
-            'jul', 'aug', 'sep', 'oct', 'nov', 'dec'
-        ];
+	// Landing hero interactions
+	const gotoUploadBtn = document.getElementById('goto-upload');
+	gotoUploadBtn?.addEventListener('click', () => {
+		document.getElementById('drop-zone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	});
+(function() {
+	const inputEl = document.getElementById('header-input');
+	const dropZone = document.getElementById('drop-zone');
+	const fileInput = document.getElementById('file-input');
+	const resultsEl = document.getElementById('results');
+	const hopsTableBody = document.querySelector('#hops-table tbody');
+	const fieldsTableBody = document.querySelector('#fields-table tbody');
+	const summaryEl = document.getElementById('summary');
+	const modal = document.getElementById('results-modal');
+	const modeEmlBtn = document.getElementById('mode-eml');
+	const modePasteBtn = document.getElementById('mode-paste');
+	const hintText = document.getElementById('hint-text');
+	const dropSquare = document.getElementById('drop-square');
 
-        this.dnsProviders = [
-            'https://cloudflare-dns.com/dns-query',
-            'https://dns.google/resolve',
-            'https://1.1.1.1/dns-query'
-        ];
+	// Default theme: dark
+	document.documentElement.setAttribute('data-theme', 'dark');
 
-        // Track highest progress value to avoid regressions on async updates
-        this.maxProgress = 0;
+	function parseRawHeaders(raw) {
+		// Unfold headers: join wrapped lines (RFC 5322 folding)
+		const unfolded = raw.replace(/\r?\n[\t ]+/g, ' ');
+		const lines = unfolded.split(/\r?\n/);
+		const headers = [];
+		let current = null;
+		for (const line of lines) {
+			if (!line.trim()) continue;
+			const sep = line.indexOf(':');
+			if (sep > -1) {
+				const name = line.slice(0, sep).trim();
+				const value = line.slice(sep + 1).trim();
+				headers.push({ name, value });
+				current = headers[headers.length - 1];
+			} else if (current) {
+				current.value += ' ' + line.trim();
+			}
+		}
+		return headers;
+	}
 
-        this.init();
-    }
+	function extractReceived(headers) {
+		const received = headers.filter(h => /^(received)$/i.test(h.name));
+		// RFC order: top-most is last hop; we want chronological
+		return received.reverse();
+	}
 
-    init() {
-        const checkButton = document.getElementById('checkButton');
-        const domainInput = document.getElementById('domain');
-        const themeToggle = document.getElementById('themeToggle');
-        this.modal = document.getElementById('resultsModal');
-        this.modalClose = document.getElementById('modalClose');
-        this.modalResults = document.getElementById('modalResults');
-        this.modalDomain = document.getElementById('modalDomain');
-        this.modalCheck = document.getElementById('modalCheck');
+	function parseReceivedLine(value) {
+		// Try capture from, by, with, id, for, and the trailing date
+		// The date is usually after ';'
+		let datePart = null;
+		let main = value;
+		const semiIdx = value.lastIndexOf(';');
+		if (semiIdx !== -1) {
+			datePart = value.slice(semiIdx + 1).trim();
+			main = value.slice(0, semiIdx).trim();
+		}
+		const fromMatch = main.match(/\bfrom\s+([^;]+?)\s+(?=by\b|with\b|id\b|for\b|$)/i);
+		const byMatch = main.match(/\bby\s+([^;]+?)\s+(?=with\b|id\b|for\b|$)/i);
+		const withMatch = main.match(/\bwith\s+([^;]+?)\s+(?=id\b|for\b|$)/i);
+		const idMatch = main.match(/\bid\s+([^;]+?)\s+(?=for\b|$)/i);
+		const forMatch = main.match(/\bfor\s+([^;]+?)\s*$/i);
+		return {
+			from: fromMatch ? fromMatch[1].trim() : null,
+			by: byMatch ? byMatch[1].trim() : null,
+			with: withMatch ? withMatch[1].trim() : null,
+			id: idMatch ? idMatch[1].trim() : null,
+			for: forMatch ? forMatch[1].trim() : null,
+			dateRaw: datePart,
+		};
+	}
 
-        checkButton.addEventListener('click', () => this.checkEmailSecurity());
-        domainInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.checkEmailSecurity();
-            }
-        });
+	function parseDateToUtc(dateStr) {
+		if (!dateStr) return { date: null, iso: null };
+		// Many headers use formats like: Sun, 3 Jul 2011 08:21:06 -0700 (PDT)
+		// Remove comments in parentheses to avoid parser confusion
+		const cleaned = dateStr.replace(/\([^)]*\)/g, '').trim();
+		const d = new Date(cleaned);
+		if (isNaN(d.getTime())) return { date: null, iso: null };
+		return { date: d, iso: d.toISOString() };
+	}
 
-        if (this.modalCheck) {
-            this.modalCheck.addEventListener('click', () => {
-                if (this.modalDomain && this.modalDomain.value) {
-                    document.getElementById('domain').value = this.modalDomain.value;
-                }
-                this.checkEmailSecurity();
-            });
-        }
-        if (this.modalDomain) {
-            this.modalDomain.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    if (this.modalDomain && this.modalDomain.value) {
-                        document.getElementById('domain').value = this.modalDomain.value;
-                    }
-                    this.checkEmailSecurity();
-                }
-            });
-        }
+	function computeHopDeltas(hops) {
+		let prevTime = null;
+		for (const hop of hops) {
+			if (hop.time && prevTime) {
+				hop.deltaMs = hop.time.getTime() - prevTime.getTime();
+			} else {
+				hop.deltaMs = null;
+			}
+			if (hop.time) prevTime = hop.time;
+		}
+		return hops;
+	}
 
-        domainInput.focus();
-        
-        // Make instance globally available for inline onclick handlers
-        window.emailChecker = this;
-        
-        // Initialize theme from persisted preference
-        this.initTheme(themeToggle);
+	function humanDelta(ms) {
+		if (ms === null || ms === undefined) return '—';
+		const sign = ms < 0 ? '-' : '';
+		const abs = Math.abs(ms);
+		const s = Math.floor(abs / 1000) % 60;
+		const m = Math.floor(abs / (60 * 1000)) % 60;
+		const h = Math.floor(abs / (60 * 60 * 1000));
+		const parts = [];
+		if (h) parts.push(`${h}u`);
+		if (m || h) parts.push(`${m}m`);
+		parts.push(`${s}s`);
+		return sign + parts.join(' ');
+	}
 
-        // Modal close handlers
-        if (this.modalClose) {
-            this.modalClose.addEventListener('click', () => this.closeModal());
-        }
-        if (this.modal) {
-            this.modal.addEventListener('click', (e) => {
-                if (e.target === this.modal) this.closeModal();
-            });
-        }
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') this.closeModal();
-        });
-    }
+	function analyze(raw) {
+		const headers = parseRawHeaders(raw);
+		const receivedLines = extractReceived(headers).map(h => h.value);
+		const hopsParsed = receivedLines.map(parseReceivedLine).map((r, idx) => {
+			const { date, iso } = parseDateToUtc(r.dateRaw);
+			return {
+				index: idx + 1,
+				from: r.from,
+				by: r.by,
+				with: r.with,
+				id: r.id,
+				for: r.for,
+				dateRaw: r.dateRaw || '—',
+				iso: iso,
+				time: date,
+			};
+		});
+		computeHopDeltas(hopsParsed);
 
-    nextFrame() {
-        return new Promise(resolve => requestAnimationFrame(() => resolve()));
-    }
+		// Compute total span and largest delta
+		const times = hopsParsed.map(h => h.time).filter(Boolean).map(d => d.getTime());
+		const totalSpan = times.length ? Math.max(...times) - Math.min(...times) : null;
+		let maxDelta = -Infinity; let maxIdx = -1;
+		for (let i = 0; i < hopsParsed.length; i++) {
+			const d = hopsParsed[i].deltaMs;
+			if (d !== null && d > maxDelta) { maxDelta = d; maxIdx = i; }
+		}
 
-    initTheme(themeToggle) {
-        const saved = localStorage.getItem('theme');
-        const isDark = saved === 'dark';
-        document.body.classList.toggle('dark', isDark);
-        if (themeToggle) themeToggle.textContent = isDark ? '☀️' : '🌙';
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                const nowDark = !document.body.classList.contains('dark');
-                document.body.classList.toggle('dark', nowDark);
-                localStorage.setItem('theme', nowDark ? 'dark' : 'light');
-                themeToggle.textContent = nowDark ? '☀️' : '🌙';
-            });
-        }
-    }
+		return { headers, hops: hopsParsed, totalSpan, maxIdx, maxDelta };
+	}
 
-    
+	function renderAnalysis(model) {
+		resultsEl.hidden = false;
+		// Summary (English)
+		const total = model.totalSpan != null ? humanDelta(model.totalSpan) : '—';
+		const maxLabel = model.maxDelta != null && model.maxDelta !== -Infinity ? humanDelta(model.maxDelta) : '—';
+		summaryEl.innerHTML = `Total transit time: <strong>${total}</strong> · Largest delay: <strong>${maxLabel}</strong>${model.maxIdx>=0 && model.hops[model.maxIdx]?.by ? ` at <code>${escapeHtml(model.hops[model.maxIdx].by)}</code>` : ''}`;
 
-    async checkEmailSecurity() {
-        const domain = document.getElementById('domain').value.trim();
-        if (!domain) {
-            this.showError('Enter a valid domain');
-            return;
-        }
+		// Hops table
+		hopsTableBody.innerHTML = '';
+		model.hops.forEach((h, i) => {
+			const tr = document.createElement('tr');
+			if (i === model.maxIdx) tr.classList.add('highlight');
+			const deltaClass = h.deltaMs != null && h.deltaMs > 60_000 ? 'delta-warn' : 'delta-ok';
+			tr.innerHTML = `
+				<td>${h.index}</td>
+				<td>${escapeHtml(h.from || '—')}</td>
+				<td>${escapeHtml(h.by || '—')}</td>
+				<td>${escapeHtml(h.dateRaw)}${h.iso ? `<br><small>${h.iso}</small>` : ''}</td>
+				<td class="${h.deltaMs!=null ? deltaClass : ''}">${h.deltaMs!=null ? humanDelta(h.deltaMs) : '—'}</td>
+			`;
+			hopsTableBody.appendChild(tr);
+		});
 
-        if (!this.isValidDomain(domain)) {
-            this.showError('Enter a valid domain (e.g., hannovanderdussen.nl)');
-            return;
-        }
+		// Fields table: show a subset of key headers
+		const wanted = ['From','To','Subject','Date','Message-Id','Return-Path','Reply-To','Delivered-To','Authentication-Results','Received-SPF'];
+		const map = new Map();
+		for (const h of model.headers) {
+			const key = h.name.trim();
+			if (wanted.some(w => w.toLowerCase() === key.toLowerCase())) {
+				if (!map.has(key)) map.set(key, []);
+				map.get(key).push(h.value);
+			}
+		}
+		fieldsTableBody.innerHTML = '';
+		for (const [k, values] of map) {
+			const tr = document.createElement('tr');
+			tr.innerHTML = `<td>${escapeHtml(k)}</td><td>${values.map(v => `<div>${escapeHtml(v)}</div>`).join('')}</td>`;
+			fieldsTableBody.appendChild(tr);
+		}
 
-        this.showLoading();
-        this.resetProgress();
+		// Authentication-Results focus (SPF/DKIM/DMARC)
+		const authStatusEl = document.getElementById('auth-status');
+		const authBadgesEl = document.getElementById('auth-badges');
+		const authDetailsEl = document.getElementById('auth-details');
+		const authHeaders = model.headers.filter(h => /^authentication-results$/i.test(h.name));
+		if (authHeaders.length) {
+			authStatusEl.hidden = false;
+			const parsed = parseAuthResults(authHeaders.map(h => h.value));
+			authBadgesEl.innerHTML = '';
+			const addBadge = (label, status) => {
+				const span = document.createElement('span');
+				span.className = `badge ${status}`;
+				span.textContent = `${label}: ${status.toUpperCase()}`;
+				authBadgesEl.appendChild(span);
+			};
+			addBadge('SPF', parsed.spf.status);
+			addBadge('DKIM', parsed.dkim.overall);
+			addBadge('DMARC', parsed.dmarc.status);
 
-        try {
-            // Show empty results container immediately in modal
-            this.initializeResultsContainer(domain);
-            await this.nextFrame();
-            
-            // Check SPF and DMARC in parallel and render immediately
-            this.updateProgress(5, 'Checking SPF and DMARC records...');
-            
-            const [spfResult, dmarcResult] = await Promise.all([
-                this.checkSPFRecord(domain),
-                this.checkDMARCRecord(domain)
-            ]);
-            
-            // Render SPF and DMARC results immediately
-            this.displayInitialResults(domain, spfResult, dmarcResult);
-            
-            this.updateProgress(20, 'Checking DKIM selectors...');
-            
-            // Start DKIM checks and update progressively
-            await this.checkAllDKIMSelectorsProgressive(domain);
-            
-        } catch (error) {
-            this.hideLoading();
-            this.showError('An error occurred while checking email security records: ' + error.message);
-        }
-    }
+			authDetailsEl.innerHTML = '';
+		} else {
+			authStatusEl.hidden = true;
+		}
+	}
 
-    initializeResultsContainer(domain) {
-        if (this.modalResults) this.modalResults.innerHTML = `
-            <div class="summary">
-                <h2>Email Security Check for ${domain}</h2>
-                <div id="spf-dmarc-container">
-                    <p>Loading SPF and DMARC records...</p>
-                </div>
-            </div>
-            <div id="dkim-container">
-                <div class="section-header">
-                    <h3>DKIM Records</h3>
-                </div>
-                <div class="section-description">
-                    Loading DKIM records...
-                </div>
-                <div class="loading" style="display:block; margin: 8px 0 16px 0;">
-                    <div class="spinner"></div>
-                    <div class="progress-container">
-                        <div class="progress-bar" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">Preparing...</div>
-                    <div class="quote-text" id="quoteText"></div>
-                </div>
-                <div id="dkim-results"></div>
-            </div>
-        `;
-        // Modal is opened in showLoading
-    }
+	function parseAuthResults(values) {
+		// Concatenate all auth-results values
+		const text = values.join(' \n ');
+		// SPF: spf=pass/fail/neutral
+		const spfMatch = text.match(/spf=(pass|fail|neutral|softfail|none)/i);
+		const spfStatus = spfMatch ? normalizeAuth(spfMatch[1]) : 'neutral';
+		// DMARC: dmarc=pass/fail
+		const dmarcMatch = text.match(/dmarc=(pass|fail|bestguesspass|none)/i);
+		const dmarcStatus = dmarcMatch ? normalizeAuth(dmarcMatch[1]) : 'neutral';
+		// DKIM: one or more dkim=pass/fail with domain
+		const dkimRegex = /dkim=(pass|fail|neutral|none)(?:\s*\(([^)]*)\))?/ig;
+		const signatures = [];
+		let m;
+		while ((m = dkimRegex.exec(text))) {
+			const result = normalizeAuth(m[1]);
+			const ctx = m[2] || '';
+			const domainMatch = ctx.match(/header\.d=([^;\s)]+)/i);
+			signatures.push({ domain: domainMatch ? domainMatch[1] : null, result });
+		}
+		const overallDkim = signatures.some(s => s.result === 'pass') ? 'pass' : (signatures.some(s => s.result === 'fail') ? 'fail' : 'neutral');
+		return { spf: { status: spfStatus }, dmarc: { status: dmarcStatus }, dkim: { overall: overallDkim, signatures } };
+	}
 
-    displayInitialResults(domain, spfResult, dmarcResult) {
-        const spfDmarcContainer = document.getElementById('spf-dmarc-container');
-        
-        spfDmarcContainer.innerHTML = `
-            <div class="security-overview">
-                <div class="security-item">
-                    <h3>SPF Record</h3>
-                    <div class="security-status ${spfResult.found ? 'status-found' : 'status-not-found'}">
-                        ${spfResult.found ? 'Found' : 'Not found'}
-                    </div>
-                    ${spfResult.found ? `
-                        <div class="record-details">
-                            <div class="record-line">
-                                <span class="record-text">${spfResult.record}</span>
-                                <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${spfResult.record.replace(/'/g, "\\'")}')">Copy</button>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-                <div class="security-item">
-                    <h3>DMARC Record</h3>
-                    <div class="security-status ${dmarcResult.found ? 'status-found' : 'status-not-found'}">
-                        ${dmarcResult.found ? 'Found' : 'Not found'}
-                    </div>
-                    ${dmarcResult.found ? `
-                        <div class="record-details">
-                            <div class="record-line">
-                                <span class="record-text">${dmarcResult.record}</span>
-                                <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${dmarcResult.record.replace(/'/g, "\\'")}')">Copy</button>
-                            </div>
-                        </div>
-                    ` : ''}
-                </div>
-            </div>
-        `;
-    }
+	function normalizeAuth(s) {
+		s = String(s).toLowerCase();
+		if (s === 'bestguesspass') return 'pass';
+		if (s === 'softfail') return 'fail';
+		return s;
+	}
 
-    async checkAllDKIMSelectorsProgressive(domain) {
-        const dkimResults = [];
-        const dkimResultsContainer = document.getElementById('dkim-results');
-        
-        // Update section description
-        const sectionDescription = document.querySelector('#dkim-container .section-description');
-        sectionDescription.textContent = 'Checking DKIM selectors...';
-        
-        for (let i = 0; i < this.commonSelectors.length; i++) {
-            const selector = this.commonSelectors[i];
-            
-            // Update progress
-            const progressPercentage = 20 + ((i / this.commonSelectors.length) * 75);
-            this.updateProgress(progressPercentage, `Checking DKIM selector: ${selector}`);
-            
-            try {
-                const result = await this.checkDKIMRecord(domain, selector);
-                if (result.found) {
-                    dkimResults.push(result);
-                    
-                    // Add to results immediately
-                    this.addDKIMResultToDOM(result, selector === 'selector1' || selector === 'selector2');
-                }
-            } catch (error) {
-                console.warn(`Error checking selector ${selector}:`, error);
-            }
-            
-            // Small delay to keep UI responsive
-            await new Promise(resolve => setTimeout(resolve, 10));
-        }
-        
-        // Update section description
-        sectionDescription.textContent = `${dkimResults.length} DKIM record(s) found`;
-        this.updateProgress(100, 'Check completed');
-        this.hideLoading();
-        
-        return dkimResults;
-    }
+	function escapeHtml(s) {
+		return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+	}
 
-    addDKIMResultToDOM(result, isMicrosoft = false) {
-        const dkimResultsContainer = document.getElementById('dkim-results');
-        
-        const resultElement = document.createElement('div');
-        resultElement.className = `selector-result ${isMicrosoft ? 'microsoft-selector' : ''}`;
-        
-        resultElement.innerHTML = `
-            <div class="selector-header" onclick="this.parentElement.classList.toggle('expanded')">
-                <div class="selector-name">
-                    ${result.selector}
-                    ${isMicrosoft ? '<span class="microsoft-badge">Microsoft</span>' : ''}
-                </div>
-                <div class="status found">Found</div>
-            </div>
-            <div class="selector-details">
-                <strong>Selector:</strong>
-                <div class="record-line">
-                    <span class="record-text">${result.selector}</span>
-                    <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${result.selector}')">Copy</button>
-                </div>
-                <strong>DKIM Record:</strong>
-                <div class="record-line">
-                    <span class="record-text">${result.record}</span>
-                    <button class="copy-btn" onclick="window.emailChecker.copyToClipboard('${result.record.replace(/'/g, "\\'")}')">Copy</button>
-                </div>
-            </div>
-        `;
-        
-        dkimResultsContainer.appendChild(resultElement);
-    }
+	function handleAnalyze() {
+		const raw = inputEl.value.trim();
+		if (!raw) { resultsEl.hidden = true; return; }
+		const model = analyze(raw);
+		renderAnalysis(model);
+		openModal();
+	}
 
-    isValidDomain(domain) {
-        const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9])*$/;
-        return domainRegex.test(domain) && domain.includes('.');
-    }
+	function handleFiles(files) {
+		if (!files || !files.length) return;
+		const file = files[0];
+		const reader = new FileReader();
+		reader.onload = () => {
+			const text = String(reader.result || '');
+			const headerBlock = extractHeadersFromEml(text) || text;
+			inputEl.value = headerBlock;
+			handleAnalyze();
+		};
+		reader.readAsText(file);
+	}
 
-    showError(message) {
-        if (this.modalResults) {
-            this.modalResults.innerHTML = `<div class="error-message">${message}</div>`;
-            this.openModal('Error');
-            return;
-        }
-        const resultsContainer = document.getElementById('results');
-        if (resultsContainer) resultsContainer.innerHTML = `<div class="error-message">${message}</div>`;
-    }
+	function extractHeadersFromEml(emlText) {
+		// Headers end at first blank line (CRLF CRLF). Keep folding intact for parseRawHeaders to handle.
+		const idx = emlText.search(/\r?\n\r?\n/);
+		if (idx === -1) return null;
+		return emlText.slice(0, idx).trimEnd();
+	}
 
-    showLoading() {
-        if (this.modalResults) {
-            this.modalResults.innerHTML = `
-                <div class="loading" style="display:block">
-                    <div class="spinner"></div>
-                    <div class="progress-container">
-                        <div class="progress-bar" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">Preparing...</div>
-                    <div class="quote-text" id="quoteText"></div>
-                </div>
-            `;
-        }
-        // keep modal controls in header in sync
-        if (this.modalDomain) this.modalDomain.value = document.getElementById('domain').value || '';
-        this.openModal('Checking...');
-        this.startQuotes();
-    }
+	function openModal() {
+		if (!modal) return;
+		modal.classList.add('show');
+		modal.setAttribute('aria-hidden', 'false');
+	}
+	function closeModal() {
+		if (!modal) return;
+		modal.classList.remove('show');
+		modal.setAttribute('aria-hidden', 'true');
+	}
 
-    hideLoading() {
-        this.stopQuotes();
-        const scope = this.modalResults || document;
-        const loader = scope.querySelector('.loading');
-        if (loader) loader.style.display = 'none';
-    }
+	// Events
+	// Removed Analyze/Clear buttons; analyze automatically on file/paste
+	fileInput.addEventListener('change', e => handleFiles(e.target.files));
 
-    resetProgress() {
-        this.maxProgress = 0;
-        this.updateProgress(0, 'Preparing...');
-    }
+	dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); dropSquare?.classList.add('dragover'); });
+	dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); dropSquare?.classList.remove('dragover'); });
+	dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); dropSquare?.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+	dropSquare?.addEventListener('click', () => fileInput.click());
 
-    updateProgress(percentage, text) {
-        const scope = this.modalResults || document;
-        const progressFill = scope.querySelector('#progressFill');
-        const progressText = scope.querySelector('#progressText');
-        const clamped = Math.max(0, Math.min(100, Math.round(percentage)));
-        const next = Math.max(this.maxProgress, clamped);
-        this.maxProgress = next;
-        if (progressFill) progressFill.style.width = next + '%';
-        if (progressText && typeof text === 'string') progressText.textContent = text;
-    }
+	// Modal close handlers
+	modal?.addEventListener('click', e => { const t = e.target; if (t && t.getAttribute && t.getAttribute('data-close') === 'modal') closeModal(); });
+	const closeBtn = document.querySelector('.modal-close');
+	closeBtn?.addEventListener('click', closeModal);
 
-    openModal(title) {
-        const titleEl = document.getElementById('modalTitle');
-        if (titleEl) titleEl.textContent = title || 'Results';
-        if (this.modal) this.modal.classList.add('open');
-        if (this.modal) this.modal.setAttribute('aria-hidden', 'false');
-    }
+	// Mode switching
+	function setMode(mode) {
+		const isEml = mode === 'eml';
+		modeEmlBtn.classList.toggle('active', isEml);
+		modePasteBtn.classList.toggle('active', !isEml);
+		uploadBtn.style.display = isEml ? '' : 'none';
+		fileInput.disabled = !isEml;
+		inputEl.hidden = isEml; // hide textarea in EML mode
+		dropSquare.style.display = isEml ? 'flex' : 'none';
+		hintText.textContent = isEml ? 'Default: drag & drop or upload a full .eml message.' : 'Paste full email headers below. You can still drop an .eml file.';
+	}
 
-    closeModal() {
-        if (this.modal) this.modal.classList.remove('open');
-        if (this.modal) this.modal.setAttribute('aria-hidden', 'true');
-    }
+	modeEmlBtn?.addEventListener('click', () => setMode('eml'));
+	modePasteBtn?.addEventListener('click', () => setMode('paste'));
+	setMode('eml');
 
-    startQuotes() {
-        const scope = this.modalResults || document;
-        const el = scope.querySelector('#quoteText');
-        if (!el) return;
-        const quotes = [
-            "Woah, that's fast, right?",
-            "Warming up the DNS engines...",
-            "Asking the internet politely...",
-            "Compiling selector magic...",
-            "Hold tight, packets in transit...",
-            "Blink and you'll miss it!",
-            "Summoning DKIM spirits...",
-            "Fetching SPF goodness...",
-            "DMARCing our territory..."
-        ];
-        let i = 0;
-        el.textContent = quotes[i % quotes.length];
-        this.quoteTimer = setInterval(() => {
-            i += 1;
-            el.textContent = quotes[i % quotes.length];
-        }, 1800);
-    }
+	// Theme switch
+	const themeToggle = document.getElementById('theme-toggle');
+	function setTheme(mode) {
+		document.documentElement.setAttribute('data-theme', mode);
+	}
+	function toggleTheme() {
+		const current = document.documentElement.getAttribute('data-theme') || 'dark';
+		setTheme(current === 'dark' ? 'light' : 'dark');
+	}
+	themeToggle?.addEventListener('click', toggleTheme);
+	themeToggle?.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTheme(); } });
+})();
 
-    stopQuotes() {
-        if (this.quoteTimer) {
-            clearInterval(this.quoteTimer);
-            this.quoteTimer = null;
-        }
-    }
 
-    async checkSPFRecord(domain) {
-        try {
-            const response = await this.queryDNS(domain, 'TXT');
-            const spfRecord = response.Answer?.find(record => 
-                record.data.includes('v=spf1')
-            );
-            
-            return {
-                found: !!spfRecord,
-                record: spfRecord ? spfRecord.data.replace(/"/g, '') : null
-            };
-        } catch (error) {
-            console.warn('SPF check failed:', error);
-            return { found: false, record: null };
-        }
-    }
-
-    async checkDMARCRecord(domain) {
-        try {
-            const dmarcDomain = `_dmarc.${domain}`;
-            const response = await this.queryDNS(dmarcDomain, 'TXT');
-            const dmarcRecord = response.Answer?.find(record => 
-                record.data.includes('v=DMARC1')
-            );
-            
-            return {
-                found: !!dmarcRecord,
-                record: dmarcRecord ? dmarcRecord.data.replace(/"/g, '') : null
-            };
-        } catch (error) {
-            console.warn('DMARC check failed:', error);
-            return { found: false, record: null };
-        }
-    }
-
-    async checkDKIMRecord(domain, selector) {
-        try {
-            const dkimDomain = `${selector}._domainkey.${domain}`;
-            const response = await this.queryDNS(dkimDomain, 'TXT');
-            
-            if (response.Answer && response.Answer.length > 0) {
-                const dkimRecord = response.Answer.find(record => 
-                    record.data.includes('v=DKIM1') || record.data.includes('k=rsa') || record.data.includes('p=')
-                );
-                
-                if (dkimRecord) {
-                    return {
-                        found: true,
-                        selector: selector,
-                        record: dkimRecord.data.replace(/"/g, ''),
-                        domain: dkimDomain
-                    };
-                }
-            }
-            
-            return { found: false, selector: selector };
-        } catch (error) {
-            return { found: false, selector: selector };
-        }
-    }
-
-    async queryDNS(domain, type) {
-        const errors = [];
-        
-        for (const provider of this.dnsProviders) {
-            try {
-                const url = `${provider}?name=${encodeURIComponent(domain)}&type=${type}`;
-                const response = await fetch(url, {
-                    headers: {
-                        'Accept': 'application/dns-json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                errors.push(`${provider}: ${error.message}`);
-                continue;
-            }
-        }
-        
-        throw new Error(`Alle DNS providers faalden: ${errors.join(', ')}`);
-    }
-
-    copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            // Visual feedback for copy
-            const button = event.target;
-            const originalText = button.textContent;
-            button.textContent = 'Copied!';
-            button.classList.add('copied');
-            
-            setTimeout(() => {
-                button.textContent = originalText;
-                button.classList.remove('copied');
-            }, 2000);
-        }).catch(err => {
-            console.error('Copy failed:', err);
-        });
-    }
-}
-
-// Initialize the checker when the page loads
-document.addEventListener('DOMContentLoaded', () => {
-    new EmailSecurityChecker();
-});

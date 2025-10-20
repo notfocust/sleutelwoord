@@ -1,87 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Security Checker</title>
-    <link rel="stylesheet" href="styles.css">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Header Check – Email header analyzer</title>
+	<meta name="description" content="Paste or upload an .eml email and analyze delivery hops, times and delays.">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Floating background elements (hidden for clean look) -->
-    <div class="floating-elements"></div>
+	<header class="site-header">
+		<div class="container">
+			<div class="theme-switch" style="float:right">
+				<button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">
+					<span class="icon sun" aria-hidden="true">☀️</span>
+					<span class="icon moon" aria-hidden="true">🌙</span>
+				</button>
+			</div>
+		</div>
+	</header>
 
-    
+	<main class="container">
+		<section class="landing-hero">
+			<h1 class="hero-title">Email Header Checker</h1>
+			<p class="hero-subtitle">Local processing of email headers</p>
+		</section>
+		<section class="input-card hero" id="drop-zone">
+			<div class="input-header">
+				<div class="actions">
+					<!-- Controls removed; use drag & drop or click the area below -->
+					<input id="file-input" type="file" accept=".eml,.txt,.msg,text/plain" hidden>
+				</div>
+			</div>
+			<div id="drop-square" class="drop-square" aria-label="Drop .eml here">
+				<div class="drop-icon" aria-hidden="true">📩</div>
+				<div class="drop-text">Drag & drop your .eml here<br><small>or click to browse</small></div>
+			</div>
+			<textarea id="header-input" placeholder="Paste full email headers here" hidden></textarea>
+		</section>
 
-    <div class="container">
-        <div class="header">
-            <h1>Email Security Checker</h1>
-            <p>Check the SPF, DMARC and DKIM records of your domain</p>
-            <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
-        </div>
-        
-        <div class="main-content">
-            <!-- Left column: Benefits -->
-            <div class="benefits-section">
-                <h2>Why use our Email Security Checker?</h2>
-                <div class="benefits-grid">
-                    <div class="benefit-item">
-                        <div class="benefit-icon">🇳🇱</div>
-                        <h3>Dutch Focus</h3>
-                        <p>Specialized in Dutch providers</p>
-                    </div>
-                    <div class="benefit-item">
-                        <div class="benefit-icon">🔍</div>
-                        <h3>200+ DKIM Checks</h3>
-                        <p>Comprehensive scan of DKIM selectors</p>
-                    </div>
-                    <div class="benefit-item">
-                        <div class="benefit-icon">⚡</div>
-                        <h3>Under 1 Minute</h3>
-                        <p>Fast results thanks to advanced DNS queries</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right column: Input and results -->
-            <div class="checker-section">
-                <div class="input-section">
-                    <div class="input-group">
-                        <input type="text" id="domain" placeholder="Enter your domain (e.g., hannovanderdussen.nl)">
-                        <button id="checkButton" class="btn btn-primary">Check</button>
-                    </div>
-                </div>
-                
-                <div id="loading" class="loading">
-                    <div class="spinner"></div>
-                    <div class="progress-container">
-                        <div class="progress-bar" id="progressFill"></div>
-                    </div>
-                    <div class="progress-text" id="progressText">Preparing...</div>
-                    <div class="quote-text" id="quoteText"></div>
-                </div>
-                
-                <div id="results" class="results"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Results Modal -->
-    <div id="resultsModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-        <div class="modal-content">
-            <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
-            <div class="modal-header">
-                <h2 id="modalTitle">Results</h2>
-                <div class="modal-controls">
-                    <input type="text" id="modalDomain" placeholder="Enter a domain" />
-                    <button id="modalCheck" class="btn btn-primary">Check</button>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div id="modalResults"></div>
-            </div>
-        </div>
-    </div>
-    
-    <script src="script.js"></script>
+		<!-- Modal popout for results -->
+		<div id="results-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+			<div class="modal-backdrop" data-close="modal"></div>
+			<div class="modal-dialog" role="document" aria-labelledby="modal-title">
+				<div class="modal-header">
+					<h2 id="modal-title">Analysis results</h2>
+					<button class="button ghost modal-close" type="button" aria-label="Close" title="Close" data-close="modal">✕</button>
+				</div>
+				<div class="modal-body">
+					<section class="results" id="results" hidden>
+						<div class="summary" id="summary"></div>
+						<div class="auth-status" id="auth-status" hidden>
+							<div class="badges" id="auth-badges"></div>
+							<div class="auth-details" id="auth-details"></div>
+						</div>
+						<div class="table-wrap" style="margin-top:12px">
+							<h3 style="margin:10px 12px">Header fields</h3>
+							<table id="fields-table" aria-label="Header fields">
+								<thead>
+									<tr>
+										<th>Field</th>
+										<th>Value</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+						<div class="table-wrap" style="margin-top:12px">
+							<h3 style="margin:10px 12px">Per-hop delay</h3>
+							<table id="hops-table" aria-label="Per-hop delay">
+								<thead>
+									<tr>
+										<th>#</th>
+										<th>From</th>
+										<th>By</th>
+										<th>Time (orig → UTC)</th>
+										<th>Δ delay</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+					</section>
+				</div>
+			</div>
+		</div>
+
+		<!-- no external references -->
+	</main>
+
+	<div class="watermark">©BigBrainToolieWhoolie</div>
+
+	<script src="script.js"></script>
 </body>
 </html>
+
